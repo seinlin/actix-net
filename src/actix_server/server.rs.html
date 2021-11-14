@@ -491,12 +491,12 @@
             .<span class="ident">collect</span>();
 
         <span class="comment">// Give log information on what runtime will be used.</span>
-        <span class="kw">let</span> <span class="ident">is_tokio</span> <span class="op">=</span> <span class="ident">tokio::runtime::Handle::try_current</span>().<span class="ident">is_ok</span>();
         <span class="kw">let</span> <span class="ident">is_actix</span> <span class="op">=</span> <span class="ident">actix_rt::System::try_current</span>().<span class="ident">is_some</span>();
+        <span class="kw">let</span> <span class="ident">is_tokio</span> <span class="op">=</span> <span class="ident">tokio::runtime::Handle::try_current</span>().<span class="ident">is_ok</span>();
 
-        <span class="kw">match</span> (<span class="ident">is_tokio</span>, <span class="ident">is_actix</span>) {
-            (<span class="bool-val">true</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">info!</span>(<span class="string">&quot;Tokio runtime found. Starting in existing Tokio runtime&quot;</span>),
-            (<span class="kw">_</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">info!</span>(<span class="string">&quot;Actix runtime found. Starting in Actix runtime&quot;</span>),
+        <span class="kw">match</span> (<span class="ident">is_actix</span>, <span class="ident">is_tokio</span>) {
+            (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">info!</span>(<span class="string">&quot;Tokio runtime found. Starting in existing Tokio runtime&quot;</span>),
+            (<span class="bool-val">true</span>, <span class="kw">_</span>) =&gt; <span class="macro">info!</span>(<span class="string">&quot;Actix runtime found. Starting in Actix runtime&quot;</span>),
             (<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">info!</span>(
                 <span class="string">&quot;Actix/Tokio runtime not found. Starting in newt Tokio current-thread runtime&quot;</span>
             ),

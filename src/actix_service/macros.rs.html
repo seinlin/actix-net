@@ -186,7 +186,7 @@
 </pre><pre class="rust"><code><span class="doccomment">/// An implementation of [`poll_ready`]() that always signals readiness.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// This should only be used for basic leaf services that have no concept of un-readiness.</span>
-<span class="doccomment">/// For wrapper or other serivice types, use [`forward_ready!`] for simple cases or write a bespoke</span>
+<span class="doccomment">/// For wrapper or other service types, use [`forward_ready!`] for simple cases or write a bespoke</span>
 <span class="doccomment">/// `poll_ready` implementation.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// [`poll_ready`]: crate::Service::poll_ready</span>
