@@ -399,7 +399,7 @@
         <span class="self">self</span>.<span class="ident">max_concurrent_connections</span>(<span class="ident">num</span>)
     }
 
-    <span class="doccomment">/// Stop Actix system.</span>
+    <span class="doccomment">/// Stop Actix `System` after server shutdown.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">system_exit</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">exit</span> <span class="op">=</span> <span class="bool-val">true</span>;
         <span class="self">self</span>
