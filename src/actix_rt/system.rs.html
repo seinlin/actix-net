@@ -321,6 +321,14 @@
 <span id="321">321</span>
 <span id="322">322</span>
 <span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">cell::RefCell</span>,
     <span class="ident">collections::HashMap</span>,
@@ -498,8 +506,8 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;io-uring&quot;</span>))]</span>
 <span class="doccomment">/// Runner that keeps a [System]&#39;s event loop alive until stop message is received.</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;io-uring&quot;</span>))]</span>
 <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;A SystemRunner does nothing unless `run` is called.&quot;</span>]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SystemRunner</span> {
@@ -513,23 +521,24 @@
 <span class="kw">impl</span> <span class="ident">SystemRunner</span> {
     <span class="doccomment">/// Starts event loop and will return once [System] is [stopped](System::stop).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">exit_code</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">run_with_code</span>()<span class="question-mark">?</span>;
+
+        <span class="kw">match</span> <span class="ident">exit_code</span> {
+            <span class="number">0</span> =&gt; <span class="prelude-val">Ok</span>(()),
+            <span class="ident">nonzero</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">io::Error::new</span>(
+                <span class="ident">io::ErrorKind::Other</span>,
+                <span class="macro">format!</span>(<span class="string">&quot;Non-zero exit code: {}&quot;</span>, <span class="ident">nonzero</span>),
+            )),
+        }
+    }
+
+    <span class="doccomment">/// Runs the event loop until [stopped](System::stop_with_code), returning the exit code.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_with_code</span>(<span class="self">self</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">SystemRunner</span> { <span class="ident">rt</span>, <span class="ident">stop_rx</span>, .. } <span class="op">=</span> <span class="self">self</span>;
 
         <span class="comment">// run loop</span>
-        <span class="kw">match</span> <span class="ident">rt</span>.<span class="ident">block_on</span>(<span class="ident">stop_rx</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">code</span>) =&gt; {
-                <span class="kw">if</span> <span class="ident">code</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                    <span class="prelude-val">Err</span>(<span class="ident">io::Error::new</span>(
-                        <span class="ident">io::ErrorKind::Other</span>,
-                        <span class="macro">format!</span>(<span class="string">&quot;Non-zero exit code: {}&quot;</span>, <span class="ident">code</span>),
-                    ))
-                } <span class="kw">else</span> {
-                    <span class="prelude-val">Ok</span>(())
-                }
-            }
-
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">io::Error::new</span>(<span class="ident">io::ErrorKind::Other</span>, <span class="ident">e</span>)),
-        }
+        <span class="ident">rt</span>.<span class="ident">block_on</span>(<span class="ident">stop_rx</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">io::Error::new</span>(<span class="ident">io::ErrorKind::Other</span>, <span class="ident">err</span>))
     }
 
     <span class="doccomment">/// Runs the provided future, blocking the current thread until the future completes.</span>
@@ -539,8 +548,8 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;io-uring&quot;</span>)]</span>
 <span class="doccomment">/// Runner that keeps a [System]&#39;s event loop alive until stop message is received.</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;io-uring&quot;</span>)]</span>
 <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;A SystemRunner does nothing unless `run` is called.&quot;</span>]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SystemRunner</span>;
@@ -549,7 +558,14 @@
 <span class="kw">impl</span> <span class="ident">SystemRunner</span> {
     <span class="doccomment">/// Starts event loop and will return once [System] is [stopped](System::stop).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="macro">unimplemented!</span>(<span class="string">&quot;SystemRunner::run is not implemented yet&quot;</span>)
+        <span class="macro">unimplemented!</span>(<span class="string">&quot;SystemRunner::run is not implemented for io-uring feature yet&quot;</span>);
+    }
+
+    <span class="doccomment">/// Runs the event loop until [stopped](System::stop_with_code), returning the exit code.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_with_code</span>(<span class="self">self</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> {
+        <span class="macro">unimplemented!</span>(
+            <span class="string">&quot;SystemRunner::run_with_code is not implemented for io-uring feature yet&quot;</span>
+        );
     }
 
     <span class="doccomment">/// Runs the provided future, blocking the current thread until the future completes.</span>
