@@ -122,7 +122,7 @@
         <span class="ident">CounterGuard::new</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">clone</span>())
     }
 
-    <span class="doccomment">/// Notify current task and return true if counter is at capacity.</span>
+    <span class="doccomment">/// Returns true if counter is below capacity. Otherwise, register to wake task when it is.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">available</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">task::Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">available</span>(<span class="ident">cx</span>)
     }

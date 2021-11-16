@@ -40,12 +40,7 @@
 <span id="40">40</span>
 <span id="41">41</span>
 <span id="42">42</span>
-</pre><pre class="rust"><code><span class="doccomment">//! TLS acceptor services for Actix ecosystem.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! ## Crate Features</span>
-<span class="doccomment">//! * `openssl` - TLS acceptor using the `openssl` crate.</span>
-<span class="doccomment">//! * `rustls` - TLS acceptor using the `rustls` crate.</span>
-<span class="doccomment">//! * `native-tls` - TLS acceptor using the `native-tls` crate.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! TLS acceptor services.</span>
 
 <span class="kw">use</span> <span class="ident">std::sync::atomic</span>::{<span class="ident">AtomicUsize</span>, <span class="ident">Ordering</span>};
 
@@ -61,6 +56,10 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">native_tls</span>;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">MAX_CONN</span>: <span class="ident">AtomicUsize</span> <span class="op">=</span> <span class="ident">AtomicUsize::new</span>(<span class="number">256</span>);
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;openssl&quot;</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rustls&quot;</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;native-tls&quot;</span>))]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">DEFAULT_TLS_HANDSHAKE_TIMEOUT</span>: <span class="ident">std::time::Duration</span> <span class="op">=</span>
+    <span class="ident">std::time::Duration::from_secs</span>(<span class="number">3</span>);
 
 <span class="macro">thread_local!</span> {
     <span class="kw">static</span> <span class="ident">MAX_CONN_COUNTER</span>: <span class="ident">Counter</span> <span class="op">=</span> <span class="ident">Counter::new</span>(<span class="ident">MAX_CONN</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>));
@@ -78,9 +77,10 @@
 
 <span class="doccomment">/// TLS error combined with service error.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TlsError</span><span class="op">&lt;</span><span class="ident">E1</span>, <span class="ident">E2</span><span class="op">&gt;</span> {
-    <span class="ident">Tls</span>(<span class="ident">E1</span>),
-    <span class="ident">Service</span>(<span class="ident">E2</span>),
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TlsError</span><span class="op">&lt;</span><span class="ident">TlsErr</span>, <span class="ident">SvcErr</span><span class="op">&gt;</span> {
+    <span class="ident">Tls</span>(<span class="ident">TlsErr</span>),
+    <span class="ident">Timeout</span>,
+    <span class="ident">Service</span>(<span class="ident">SvcErr</span>),
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
