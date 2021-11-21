@@ -323,12 +323,6 @@
 <span id="323">323</span>
 <span id="324">324</span>
 <span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">cell::RefCell</span>,
     <span class="ident">collections::HashMap</span>,
@@ -398,11 +392,7 @@
         <span class="kw">let</span> <span class="ident">sys_ctrl</span> <span class="op">=</span> <span class="ident">SystemController::new</span>(<span class="ident">sys_rx</span>, <span class="ident">stop_tx</span>);
         <span class="ident">rt</span>.<span class="ident">spawn</span>(<span class="ident">sys_ctrl</span>);
 
-        <span class="ident">SystemRunner</span> {
-            <span class="ident">rt</span>,
-            <span class="ident">stop_rx</span>,
-            <span class="ident">system</span>,
-        }
+        <span class="ident">SystemRunner</span> { <span class="ident">rt</span>, <span class="ident">stop_rx</span> }
     }
 }
 
@@ -425,7 +415,7 @@
     <span class="kw">where</span>
         <span class="ident">F</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">tokio::runtime::Runtime</span>,
     {
-        <span class="macro">unimplemented!</span>(<span class="string">&quot;System::with_tokio_rt is not implemented yet&quot;</span>)
+        <span class="macro">unimplemented!</span>(<span class="string">&quot;System::with_tokio_rt is not implemented for io-uring feature yet&quot;</span>)
     }
 }
 
@@ -513,8 +503,6 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SystemRunner</span> {
     <span class="ident">rt</span>: <span class="ident"><span class="kw">crate</span>::runtime::Runtime</span>,
     <span class="ident">stop_rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="ident">system</span>: <span class="ident">System</span>,
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;io-uring&quot;</span>))]</span>
