@@ -294,8 +294,7 @@
     <span class="ident">server::ServerCommand</span>,
     <span class="ident">service</span>::{<span class="ident">InternalServiceFactory</span>, <span class="ident">ServiceFactory</span>, <span class="ident">StreamNewService</span>},
     <span class="ident">socket</span>::{
-        <span class="ident">create_mio_tcp_listener</span>, <span class="ident">MioListener</span>, <span class="ident">MioTcpListener</span>, <span class="ident">StdSocketAddr</span>, <span class="ident">StdTcpListener</span>,
-        <span class="ident">ToSocketAddrs</span>,
+        <span class="ident">create_mio_tcp_listener</span>, <span class="ident">MioListener</span>, <span class="ident">MioTcpListener</span>, <span class="ident">StdTcpListener</span>, <span class="ident">ToSocketAddrs</span>,
     },
     <span class="ident">worker::ServerWorkerConfig</span>,
     <span class="ident">Server</span>,
@@ -529,7 +528,8 @@
         <span class="kw">use</span> <span class="ident">std::net</span>::{<span class="ident">IpAddr</span>, <span class="ident">Ipv4Addr</span>};
         <span class="ident">lst</span>.<span class="ident">set_nonblocking</span>(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">token</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_token</span>();
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">StdSocketAddr::new</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">Ipv4Addr::new</span>(<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>)), <span class="number">8080</span>);
+        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span>
+            <span class="ident"><span class="kw">crate</span>::socket::StdSocketAddr::new</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">Ipv4Addr::new</span>(<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>)), <span class="number">8080</span>);
         <span class="self">self</span>.<span class="ident">factories</span>.<span class="ident">push</span>(<span class="ident">StreamNewService::create</span>(
             <span class="ident">name</span>.<span class="ident">as_ref</span>().<span class="ident">to_string</span>(),
             <span class="ident">token</span>,
