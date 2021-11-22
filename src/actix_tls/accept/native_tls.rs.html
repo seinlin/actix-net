@@ -188,7 +188,6 @@
 <span id="188">188</span>
 <span id="189">189</span>
 <span id="190">190</span>
-<span id="191">191</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">convert::Infallible</span>,
     <span class="ident">io</span>::{<span class="self">self</span>, <span class="ident">IoSlice</span>},
@@ -325,7 +324,6 @@
     <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">TlsError</span><span class="op">&lt;</span><span class="ident">Error</span>, <span class="ident">Infallible</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> ();
-
     <span class="kw">type</span> <span class="ident">Service</span> <span class="op">=</span> <span class="ident">NativeTlsAcceptorService</span>;
     <span class="kw">type</span> <span class="ident">InitError</span> <span class="op">=</span> ();
     <span class="kw">type</span> <span class="ident">Future</span> <span class="op">=</span> <span class="ident">LocalBoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Service</span>, <span class="ident"><span class="self">Self</span>::InitError</span><span class="op">&gt;</span><span class="op">&gt;</span>;
