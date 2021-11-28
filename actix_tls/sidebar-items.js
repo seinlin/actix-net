@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["accept","TLS acceptor services."],["connect","TCP connector services for Actix ecosystem."]]});
+initSidebarItems({"mod":[["accept","TLS acceptor services."],["connect","TCP and TLS connector services."]]});
