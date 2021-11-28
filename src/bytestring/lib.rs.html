@@ -327,6 +327,12 @@
 <span id="326">326</span>
 <span id="327">327</span>
 <span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
 </pre><pre class="rust"><code><span class="doccomment">//! A UTF-8 encoded read-only string using Bytes as storage.</span>
 
 <span class="attribute">#![<span class="ident">no_std</span>]</span>
@@ -560,10 +566,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="ident">alloc::borrow::ToOwned</span>;
-    <span class="kw">use</span> <span class="ident">core</span>::{
-        <span class="ident">hash</span>::{<span class="ident">Hash</span>, <span class="ident">Hasher</span>},
-        <span class="ident">panic</span>::{<span class="ident">RefUnwindSafe</span>, <span class="ident">UnwindSafe</span>},
-    };
+    <span class="kw">use</span> <span class="ident">core::hash</span>::{<span class="ident">Hash</span>, <span class="ident">Hasher</span>};
 
     <span class="kw">use</span> <span class="ident">ahash::AHasher</span>;
     <span class="kw">use</span> <span class="ident">static_assertions::assert_impl_all</span>;
@@ -571,9 +574,18 @@
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
     <span class="macro">assert_impl_all!</span>(<span class="ident">ByteString</span>: <span class="ident">Send</span>, <span class="ident">Sync</span>, <span class="ident">Unpin</span>, <span class="ident">Sized</span>);
-    <span class="macro">assert_impl_all!</span>(<span class="ident">ByteString</span>: <span class="ident">UnwindSafe</span>, <span class="ident">RefUnwindSafe</span>);
     <span class="macro">assert_impl_all!</span>(<span class="ident">ByteString</span>: <span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Eq</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>);
     <span class="macro">assert_impl_all!</span>(<span class="ident">ByteString</span>: <span class="ident">fmt::Debug</span>, <span class="ident">fmt::Display</span>);
+
+    <span class="attribute">#[<span class="ident">rustversion::since</span>(<span class="number">1.56</span>)]</span>
+    <span class="kw">mod</span> <span class="ident">above_1_56_impls</span> {
+        <span class="comment">// `[Ref]UnwindSafe` traits were only in std until rust 1.56</span>
+
+        <span class="kw">use</span> <span class="ident">core::panic</span>::{<span class="ident">RefUnwindSafe</span>, <span class="ident">UnwindSafe</span>};
+
+        <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+        <span class="macro">assert_impl_all!</span>(<span class="ident">ByteString</span>: <span class="ident">UnwindSafe</span>, <span class="ident">RefUnwindSafe</span>);
+    }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_partial_eq</span>() {
