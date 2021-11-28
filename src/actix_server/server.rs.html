@@ -356,6 +356,12 @@
 <span id="355">355</span>
 <span id="356">356</span>
 <span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">future::Future</span>,
     <span class="ident">io</span>, <span class="ident">mem</span>,
@@ -377,7 +383,7 @@
     <span class="ident">builder::ServerBuilder</span>,
     <span class="ident">join_all::join_all</span>,
     <span class="ident">service::InternalServiceFactory</span>,
-    <span class="ident">signals</span>::{<span class="ident">Signal</span>, <span class="ident">Signals</span>},
+    <span class="ident">signals</span>::{<span class="ident">SignalKind</span>, <span class="ident">Signals</span>},
     <span class="ident">waker_queue</span>::{<span class="ident">WakerInterest</span>, <span class="ident">WakerQueue</span>},
     <span class="ident">worker</span>::{<span class="ident">ServerWorker</span>, <span class="ident">ServerWorkerConfig</span>, <span class="ident">WorkerHandleServer</span>},
     <span class="ident">ServerHandle</span>,
@@ -385,16 +391,22 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">ServerCommand</span> {
-    <span class="doccomment">/// TODO</span>
+    <span class="doccomment">/// Worker failed to accept connection, indicating a probable panic.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Contains index of faulted worker.</span>
     <span class="ident">WorkerFaulted</span>(<span class="ident">usize</span>),
 
+    <span class="doccomment">/// Pause accepting connections.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// Contains return channel to notify caller of successful state change.</span>
     <span class="ident">Pause</span>(<span class="ident">oneshot::Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>),
 
+    <span class="doccomment">/// Resume accepting connections.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// Contains return channel to notify caller of successful state change.</span>
     <span class="ident">Resume</span>(<span class="ident">oneshot::Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>),
 
-    <span class="doccomment">/// TODO</span>
+    <span class="doccomment">/// Stop accepting connections and begin shutdown procedure.</span>
     <span class="ident">Stop</span> {
         <span class="doccomment">/// True if shut down should be graceful.</span>
         <span class="ident">graceful</span>: <span class="ident">bool</span>,
@@ -682,9 +694,9 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">handle_signal</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">signal</span>: <span class="ident">Signal</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">handle_signal</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">signal</span>: <span class="ident">SignalKind</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="ident">signal</span> {
-            <span class="ident">Signal::Int</span> =&gt; {
+            <span class="ident">SignalKind::Int</span> =&gt; {
                 <span class="macro">info!</span>(<span class="string">&quot;SIGINT received; starting forced shutdown&quot;</span>);
                 <span class="self">self</span>.<span class="ident">exit</span> <span class="op">=</span> <span class="bool-val">true</span>;
                 <span class="self">self</span>.<span class="ident">handle_cmd</span>(<span class="ident">ServerCommand::Stop</span> {
@@ -693,7 +705,7 @@
                 })
             }
 
-            <span class="ident">Signal::Term</span> =&gt; {
+            <span class="ident">SignalKind::Term</span> =&gt; {
                 <span class="macro">info!</span>(<span class="string">&quot;SIGTERM received; starting graceful shutdown&quot;</span>);
                 <span class="self">self</span>.<span class="ident">exit</span> <span class="op">=</span> <span class="bool-val">true</span>;
                 <span class="self">self</span>.<span class="ident">handle_cmd</span>(<span class="ident">ServerCommand::Stop</span> {
@@ -702,7 +714,7 @@
                 })
             }
 
-            <span class="ident">Signal::Quit</span> =&gt; {
+            <span class="ident">SignalKind::Quit</span> =&gt; {
                 <span class="macro">info!</span>(<span class="string">&quot;SIGQUIT received; starting forced shutdown&quot;</span>);
                 <span class="self">self</span>.<span class="ident">exit</span> <span class="op">=</span> <span class="bool-val">true</span>;
                 <span class="self">self</span>.<span class="ident">handle_cmd</span>(<span class="ident">ServerCommand::Stop</span> {
