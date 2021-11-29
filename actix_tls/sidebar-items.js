@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["accept","TLS acceptor services."],["connect","TCP and TLS connector services."]]});
+initSidebarItems({"mod":[["accept","TLS connection acceptor services."],["connect","TCP and TLS connector services."]]});

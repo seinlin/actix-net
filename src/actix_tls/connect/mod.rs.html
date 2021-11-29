@@ -34,41 +34,63 @@
 <span id="33">33</span>
 <span id="34">34</span>
 <span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
 </pre><pre class="rust"><code><span class="doccomment">//! TCP and TLS connector services.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Stages of the TCP connector service:</span>
-<span class="doccomment">//! - Resolve [`Address`] with given [`Resolver`] and collect list of socket addresses.</span>
-<span class="doccomment">//! - Establish TCP connection and return [`TcpStream`].</span>
+<span class="doccomment">//! 1. Resolve [`Host`] (if needed) with given [`Resolver`] and collect list of socket addresses.</span>
+<span class="doccomment">//! 1. Establish TCP connection and return [`TcpStream`].</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Stages of TLS connector services:</span>
-<span class="doccomment">//! - Establish [`TcpStream`] with connector service.</span>
-<span class="doccomment">//! - Wrap the stream and perform connect handshake with remote peer.</span>
-<span class="doccomment">//! - Return certain stream type that impls `AsyncRead` and `AsyncWrite`.</span>
+<span class="doccomment">//! 1. Resolve DNS and establish a [`TcpStream`] with the TCP connector service.</span>
+<span class="doccomment">//! 1. Wrap the stream and perform connect handshake with remote peer.</span>
+<span class="doccomment">//! 1. Return wrapped stream type that implements `AsyncRead` and `AsyncWrite`.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! [`TcpStream`]: actix_rt::net::TcpStream</span>
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_inception</span>)]</span>
-<span class="kw">mod</span> <span class="ident">connect</span>;
+<span class="kw">mod</span> <span class="ident">connect_addrs</span>;
+<span class="kw">mod</span> <span class="ident">connection</span>;
 <span class="kw">mod</span> <span class="ident">connector</span>;
 <span class="kw">mod</span> <span class="ident">error</span>;
+<span class="kw">mod</span> <span class="ident">host</span>;
+<span class="kw">mod</span> <span class="ident">info</span>;
 <span class="kw">mod</span> <span class="ident">resolve</span>;
-<span class="kw">mod</span> <span class="ident">service</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tls</span>;
-<span class="comment">// TODO: remove `ssl` mod re-export in next break change</span>
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">tls</span> <span class="kw">as</span> <span class="ident">ssl</span>;
-<span class="kw">mod</span> <span class="ident">tcp</span>;
+<span class="kw">mod</span> <span class="ident">resolver</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tcp</span>;
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;uri&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;uri&quot;</span>)))]</span>
 <span class="kw">mod</span> <span class="ident">uri</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::connect</span>::{<span class="ident">Address</span>, <span class="ident">Connect</span>, <span class="ident">Connection</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::connector</span>::{<span class="ident">TcpConnector</span>, <span class="ident">TcpConnectorFactory</span>};
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;openssl&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;openssl&quot;</span>)))]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">openssl</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rustls&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rustls&quot;</span>)))]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">rustls</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;native-tls&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;native-tls&quot;</span>)))]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">native_tls</span>;
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::connection::Connection</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::connector</span>::{<span class="ident">Connector</span>, <span class="ident">ConnectorService</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::error::ConnectError</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::resolve</span>::{<span class="ident">Resolve</span>, <span class="ident">Resolver</span>, <span class="ident">ResolverFactory</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::service</span>::{<span class="ident">ConnectService</span>, <span class="ident">ConnectServiceFactory</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::tcp</span>::{
-    <span class="ident">default_connector</span>, <span class="ident">default_connector_factory</span>, <span class="ident">new_connector</span>, <span class="ident">new_connector_factory</span>,
-};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::host::Host</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::info::ConnectInfo</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::resolve::Resolve</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::resolver</span>::{<span class="ident">Resolver</span>, <span class="ident">ResolverService</span>};
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (686e313a9 2021-11-27)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (db9d361a4 2021-11-28)" ></div>
 </body></html>
