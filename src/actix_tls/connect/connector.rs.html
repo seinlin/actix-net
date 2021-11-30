@@ -126,6 +126,7 @@
 <span id="125">125</span>
 <span id="126">126</span>
 <span id="127">127</span>
+<span id="128">128</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">future::Future</span>,
     <span class="ident">pin::Pin</span>,
@@ -162,7 +163,7 @@
     <span class="doccomment">/// Build connector service.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">service</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ConnectorService</span> {
         <span class="ident">ConnectorService</span> {
-            <span class="ident">tcp</span>: <span class="ident">TcpConnector</span>.<span class="ident">service</span>(),
+            <span class="ident">tcp</span>: <span class="ident">TcpConnector::default</span>().<span class="ident">service</span>(),
             <span class="ident">resolver</span>: <span class="self">self</span>.<span class="ident">resolver</span>.<span class="ident">service</span>(),
         }
     }
@@ -185,7 +186,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// Service implementation receives connection information, resolves DNS if required, and returns</span>
 <span class="doccomment">/// a TCP stream.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConnectorService</span> {
     <span class="ident">tcp</span>: <span class="ident">TcpConnectorService</span>,
     <span class="ident">resolver</span>: <span class="ident">ResolverService</span>,
@@ -206,14 +207,14 @@
     }
 }
 
-<span class="doccomment">/// Helper enum to generic over futures of resolve and connect steps.</span>
+<span class="doccomment">/// Chains futures of resolve and connect steps.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">ConnectFut</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Host</span><span class="op">&gt;</span> {
     <span class="ident">Resolve</span>(<span class="op">&lt;</span><span class="ident">ResolverService</span> <span class="kw">as</span> <span class="ident">Service</span><span class="op">&lt;</span><span class="ident">ConnectInfo</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Future</span>),
     <span class="ident">Connect</span>(<span class="op">&lt;</span><span class="ident">TcpConnectorService</span> <span class="kw">as</span> <span class="ident">Service</span><span class="op">&lt;</span><span class="ident">ConnectInfo</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Future</span>),
 }
 
-<span class="doccomment">/// Helper enum to contain the future output of `ConnectFuture`.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">ConnectOutput</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Host</span><span class="op">&gt;</span> {
+<span class="doccomment">/// Container for the intermediate states of [`ConnectFut`].</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">ConnectFutState</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Host</span><span class="op">&gt;</span> {
     <span class="ident">Resolved</span>(<span class="ident">ConnectInfo</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>),
     <span class="ident">Connected</span>(<span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">TcpStream</span><span class="op">&gt;</span>),
 }
@@ -222,13 +223,14 @@
     <span class="kw">fn</span> <span class="ident">poll_connect</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConnectOutput</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>, <span class="ident">ConnectError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConnectFutState</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>, <span class="ident">ConnectError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">ConnectFut::Resolve</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">fut</span>) =&gt; {
-                <span class="ident">Pin::new</span>(<span class="ident">fut</span>).<span class="ident">poll</span>(<span class="ident">cx</span>).<span class="ident">map_ok</span>(<span class="ident">ConnectOutput::Resolved</span>)
+                <span class="ident">Pin::new</span>(<span class="ident">fut</span>).<span class="ident">poll</span>(<span class="ident">cx</span>).<span class="ident">map_ok</span>(<span class="ident">ConnectFutState::Resolved</span>)
             }
+
             <span class="ident">ConnectFut::Connect</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">fut</span>) =&gt; {
-                <span class="ident">Pin::new</span>(<span class="ident">fut</span>).<span class="ident">poll</span>(<span class="ident">cx</span>).<span class="ident">map_ok</span>(<span class="ident">ConnectOutput::Connected</span>)
+                <span class="ident">Pin::new</span>(<span class="ident">fut</span>).<span class="ident">poll</span>(<span class="ident">cx</span>).<span class="ident">map_ok</span>(<span class="ident">ConnectFutState::Connected</span>)
             }
         }
     }
@@ -245,14 +247,14 @@
     <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
         <span class="kw">loop</span> {
             <span class="kw">match</span> <span class="macro">ready!</span>(<span class="self">self</span>.<span class="ident">fut</span>.<span class="ident">poll_connect</span>(<span class="ident">cx</span>))<span class="question-mark">?</span> {
-                <span class="ident">ConnectOutput::Resolved</span>(<span class="ident">res</span>) =&gt; {
+                <span class="ident">ConnectFutState::Resolved</span>(<span class="ident">res</span>) =&gt; {
                     <span class="self">self</span>.<span class="ident">fut</span> <span class="op">=</span> <span class="ident">ConnectFut::Connect</span>(<span class="self">self</span>.<span class="ident">tcp</span>.<span class="ident">call</span>(<span class="ident">res</span>));
                 }
-                <span class="ident">ConnectOutput::Connected</span>(<span class="ident">res</span>) =&gt; <span class="kw">return</span> <span class="ident">Poll::Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">res</span>)),
+                <span class="ident">ConnectFutState::Connected</span>(<span class="ident">res</span>) =&gt; <span class="kw">return</span> <span class="ident">Poll::Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">res</span>)),
             }
         }
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (db9d361a4 2021-11-28)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (6db0a0e9a 2021-11-29)" ></div>
 </body></html>

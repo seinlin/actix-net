@@ -147,6 +147,8 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Rustls based connector service.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! See [`TlsConnector`] for main connector service factory docs.</span>
@@ -166,7 +168,7 @@
 <span class="kw">use</span> <span class="ident">futures_core::ready</span>;
 <span class="kw">use</span> <span class="ident">log::trace</span>;
 <span class="kw">use</span> <span class="ident">tokio_rustls::rustls</span>::{<span class="ident">client::ServerName</span>, <span class="ident">OwnedTrustAnchor</span>, <span class="ident">RootCertStore</span>};
-<span class="kw">use</span> <span class="ident">tokio_rustls</span>::{<span class="ident">client::TlsStream</span>, <span class="ident">rustls::ClientConfig</span>};
+<span class="kw">use</span> <span class="ident">tokio_rustls</span>::{<span class="ident">client::TlsStream</span> <span class="kw">as</span> <span class="ident">AsyncTlsStream</span>, <span class="ident">rustls::ClientConfig</span>};
 <span class="kw">use</span> <span class="ident">tokio_rustls</span>::{<span class="ident">Connect</span> <span class="kw">as</span> <span class="ident">RustlsConnect</span>, <span class="ident">TlsConnector</span> <span class="kw">as</span> <span class="ident">RustlsTlsConnector</span>};
 <span class="kw">use</span> <span class="ident">webpki_roots::TLS_SERVER_ROOTS</span>;
 
@@ -175,7 +177,9 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">reexports</span> {
     <span class="doccomment">//! Re-exports from `rustls` and `webpki_roots` that are useful for connectors.</span>
 
-    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">tokio_rustls</span>::{<span class="ident">client::TlsStream</span>, <span class="ident">rustls::ClientConfig</span>};
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">tokio_rustls::rustls::ClientConfig</span>;
+
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">tokio_rustls::client::TlsStream</span> <span class="kw">as</span> <span class="ident">AsyncTlsStream</span>;
 
     <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">webpki_roots::TLS_SERVER_ROOTS</span>;
 }
@@ -218,7 +222,7 @@
     <span class="ident">R</span>: <span class="ident">Host</span>,
     <span class="ident">IO</span>: <span class="ident">ActixStream</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
 {
-    <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">AsyncTlsStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">io::Error</span>;
     <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> ();
     <span class="kw">type</span> <span class="ident">Service</span> <span class="op">=</span> <span class="ident">TlsConnectorService</span>;
@@ -243,7 +247,7 @@
     <span class="ident">R</span>: <span class="ident">Host</span>,
     <span class="ident">IO</span>: <span class="ident">ActixStream</span>,
 {
-    <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">AsyncTlsStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">io::Error</span>;
     <span class="kw">type</span> <span class="ident">Future</span> <span class="op">=</span> <span class="ident">ConnectFut</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">IO</span><span class="op">&gt;</span>;
 
@@ -279,7 +283,7 @@
     <span class="ident">R</span>: <span class="ident">Host</span>,
     <span class="ident">IO</span>: <span class="ident">ActixStream</span>,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">io::Error</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">AsyncTlsStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">io::Error</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">poll</span>(<span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">get_mut</span>() {
@@ -296,5 +300,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (db9d361a4 2021-11-28)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (6db0a0e9a 2021-11-29)" ></div>
 </body></html>

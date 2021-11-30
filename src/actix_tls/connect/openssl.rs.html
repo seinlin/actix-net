@@ -145,6 +145,8 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><pre class="rust"><code><span class="doccomment">//! OpenSSL based connector service.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! See [`TlsConnector`] for main connector service factory docs.</span>
@@ -162,14 +164,16 @@
 <span class="kw">use</span> <span class="ident">futures_core::ready</span>;
 <span class="kw">use</span> <span class="ident">log::trace</span>;
 <span class="kw">use</span> <span class="ident">openssl::ssl::SslConnector</span>;
-<span class="kw">use</span> <span class="ident">tokio_openssl::SslStream</span>;
+<span class="kw">use</span> <span class="ident">tokio_openssl::SslStream</span> <span class="kw">as</span> <span class="ident">AsyncSslStream</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::connect</span>::{<span class="ident">Connection</span>, <span class="ident">Host</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">reexports</span> {
-    <span class="doccomment">//! Re-exports from `openssl` that are useful for connectors.</span>
+    <span class="doccomment">//! Re-exports from `openssl` and `tokio-openssl` that are useful for connectors.</span>
 
-    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">openssl::ssl</span>::{<span class="ident">Error</span> <span class="kw">as</span> <span class="ident">SslError</span>, <span class="ident">HandshakeError</span>, <span class="ident">SslConnector</span>, <span class="ident">SslMethod</span>};
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">openssl::ssl</span>::{<span class="ident">Error</span>, <span class="ident">HandshakeError</span>, <span class="ident">SslConnector</span>, <span class="ident">SslMethod</span>};
+
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">tokio_openssl::SslStream</span> <span class="kw">as</span> <span class="ident">AsyncSslStream</span>;
 }
 
 <span class="doccomment">/// Connector service factory using `openssl`.</span>
@@ -202,7 +206,7 @@
     <span class="ident">R</span>: <span class="ident">Host</span>,
     <span class="ident">IO</span>: <span class="ident">ActixStream</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
 {
-    <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">SslStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">AsyncSslStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">io::Error</span>;
     <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> ();
     <span class="kw">type</span> <span class="ident">Service</span> <span class="op">=</span> <span class="ident">TlsConnectorService</span>;
@@ -234,7 +238,7 @@
     <span class="ident">R</span>: <span class="ident">Host</span>,
     <span class="ident">IO</span>: <span class="ident">ActixStream</span>,
 {
-    <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">SslStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">AsyncSslStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">io::Error</span>;
     <span class="kw">type</span> <span class="ident">Future</span> <span class="op">=</span> <span class="ident">ConnectFut</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">IO</span><span class="op">&gt;</span>;
 
@@ -255,7 +259,7 @@
             .<span class="ident">expect</span>(<span class="string">&quot;SSL connect configuration was invalid.&quot;</span>);
 
         <span class="ident">ConnectFut</span> {
-            <span class="ident">io</span>: <span class="prelude-val">Some</span>(<span class="ident">SslStream::new</span>(<span class="ident">ssl</span>, <span class="ident">io</span>).<span class="ident">unwrap</span>()),
+            <span class="ident">io</span>: <span class="prelude-val">Some</span>(<span class="ident">AsyncSslStream::new</span>(<span class="ident">ssl</span>, <span class="ident">io</span>).<span class="ident">unwrap</span>()),
             <span class="ident">stream</span>: <span class="prelude-val">Some</span>(<span class="ident">stream</span>),
         }
     }
@@ -264,7 +268,7 @@
 <span class="doccomment">/// Connect future for OpenSSL service.</span>
 <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConnectFut</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">IO</span><span class="op">&gt;</span> {
-    <span class="ident">io</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SslStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">io</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AsyncSslStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">stream</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
@@ -273,7 +277,7 @@
     <span class="ident">R</span>: <span class="ident">Host</span>,
     <span class="ident">IO</span>: <span class="ident">ActixStream</span>,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">SslStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">io::Error</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">AsyncSslStream</span><span class="op">&lt;</span><span class="ident">IO</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">io::Error</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">poll</span>(<span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">this</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_mut</span>();
@@ -292,5 +296,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (db9d361a4 2021-11-28)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (6db0a0e9a 2021-11-29)" ></div>
 </body></html>

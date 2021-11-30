@@ -201,6 +201,8 @@
 <span id="200">200</span>
 <span id="201">201</span>
 <span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
 </pre><pre class="rust"><code><span class="doccomment">//! TCP connector service.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! See [`TcpConnector`] for main connector service factory docs.</span>
@@ -224,13 +226,14 @@
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">connect_addrs::ConnectAddrs</span>, <span class="ident">error::ConnectError</span>, <span class="ident">ConnectInfo</span>, <span class="ident">Connection</span>, <span class="ident">Host</span>};
 
 <span class="doccomment">/// TCP connector service factory.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TcpConnector</span>;
 
 <span class="kw">impl</span> <span class="ident">TcpConnector</span> {
     <span class="doccomment">/// Returns a new TCP connector service.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">service</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">TcpConnectorService</span> {
-        <span class="ident">TcpConnectorService</span>
+        <span class="ident">TcpConnectorService::default</span>()
     }
 }
 
@@ -248,7 +251,8 @@
 }
 
 <span class="doccomment">/// TCP connector service.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TcpConnectorService</span>;
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Host</span><span class="op">&gt;</span> <span class="ident">Service</span><span class="op">&lt;</span><span class="ident">ConnectInfo</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TcpConnectorService</span> {
@@ -404,5 +408,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (db9d361a4 2021-11-28)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="actix_tls" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (6db0a0e9a 2021-11-29)" ></div>
 </body></html>
