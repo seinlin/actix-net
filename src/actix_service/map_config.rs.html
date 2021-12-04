@@ -157,7 +157,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MapConfig</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Req</span>, <span class="ident">F</span>, <span class="ident">Cfg</span><span class="op">&gt;</span> {
     <span class="ident">factory</span>: <span class="ident">SF</span>,
     <span class="ident">cfg_mapper</span>: <span class="ident">F</span>,
-    <span class="ident">e</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span>(<span class="ident">Cfg</span>, <span class="ident">Req</span>)<span class="op">&gt;</span>,
+    <span class="ident">e</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="kw">fn</span>(<span class="ident">Cfg</span>, <span class="ident">Req</span>)<span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Req</span>, <span class="ident">F</span>, <span class="ident">Cfg</span><span class="op">&gt;</span> <span class="ident">MapConfig</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Req</span>, <span class="ident">F</span>, <span class="ident">Cfg</span><span class="op">&gt;</span> {
@@ -211,7 +211,7 @@
 <span class="doccomment">/// `unit_config()` config combinator</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UnitConfig</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Cfg</span>, <span class="ident">Req</span><span class="op">&gt;</span> {
     <span class="ident">factory</span>: <span class="ident">SF</span>,
-    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span>(<span class="ident">Cfg</span>, <span class="ident">Req</span>)<span class="op">&gt;</span>,
+    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="kw">fn</span>(<span class="ident">Cfg</span>, <span class="ident">Req</span>)<span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Cfg</span>, <span class="ident">Req</span><span class="op">&gt;</span> <span class="ident">UnitConfig</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Cfg</span>, <span class="ident">Req</span><span class="op">&gt;</span>

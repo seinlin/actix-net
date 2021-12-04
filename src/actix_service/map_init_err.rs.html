@@ -113,7 +113,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MapInitErr</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">F</span>, <span class="ident">Req</span>, <span class="prelude-val">Err</span><span class="op">&gt;</span> {
     <span class="ident">a</span>: <span class="ident">A</span>,
     <span class="ident">f</span>: <span class="ident">F</span>,
-    <span class="ident">e</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span>(<span class="ident">Req</span>, <span class="prelude-val">Err</span>)<span class="op">&gt;</span>,
+    <span class="ident">e</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="kw">fn</span>(<span class="ident">Req</span>) -&gt; <span class="prelude-val">Err</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">F</span>, <span class="ident">Req</span>, <span class="prelude-val">Err</span><span class="op">&gt;</span> <span class="ident">MapInitErr</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">F</span>, <span class="ident">Req</span>, <span class="prelude-val">Err</span><span class="op">&gt;</span>

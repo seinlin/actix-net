@@ -350,7 +350,7 @@
 <span class="doccomment">/// Pipeline service - pipeline allows to compose multiple service into one service.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Pipeline</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="ident">Req</span><span class="op">&gt;</span> {
     <span class="ident">service</span>: <span class="ident">S</span>,
-    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">Req</span><span class="op">&gt;</span>,
+    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="kw">fn</span>(<span class="ident">Req</span>)<span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="ident">Req</span><span class="op">&gt;</span> <span class="ident">Pipeline</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="ident">Req</span><span class="op">&gt;</span>
@@ -472,7 +472,7 @@
 <span class="doccomment">/// Pipeline factory</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">PipelineFactory</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Req</span><span class="op">&gt;</span> {
     <span class="ident">factory</span>: <span class="ident">SF</span>,
-    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">Req</span><span class="op">&gt;</span>,
+    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="kw">fn</span>(<span class="ident">Req</span>)<span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Req</span><span class="op">&gt;</span> <span class="ident">PipelineFactory</span><span class="op">&lt;</span><span class="ident">SF</span>, <span class="ident">Req</span><span class="op">&gt;</span>

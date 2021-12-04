@@ -110,7 +110,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TransformMapInitErr</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">Req</span>, <span class="ident">F</span>, <span class="ident">E</span><span class="op">&gt;</span> {
     <span class="ident">transform</span>: <span class="ident">T</span>,
     <span class="ident">mapper</span>: <span class="ident">F</span>,
-    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span>(<span class="ident">S</span>, <span class="ident">Req</span>, <span class="ident">E</span>)<span class="op">&gt;</span>,
+    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="kw">fn</span>(<span class="ident">Req</span>) -&gt; (<span class="ident">S</span>, <span class="ident">E</span>)<span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">F</span>, <span class="ident">E</span>, <span class="ident">Req</span><span class="op">&gt;</span> <span class="ident">TransformMapInitErr</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">Req</span>, <span class="ident">F</span>, <span class="ident">E</span><span class="op">&gt;</span> {
