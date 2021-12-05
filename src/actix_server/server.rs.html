@@ -356,9 +356,6 @@
 <span id="355">355</span>
 <span id="356">356</span>
 <span id="357">357</span>
-<span id="358">358</span>
-<span id="359">359</span>
-<span id="360">360</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">future::Future</span>,
     <span class="ident">io</span>, <span class="ident">mem</span>,
@@ -368,12 +365,10 @@
 };
 
 <span class="kw">use</span> <span class="ident">actix_rt</span>::{<span class="ident">time::sleep</span>, <span class="ident">System</span>};
-<span class="kw">use</span> <span class="ident">futures_core::future::BoxFuture</span>;
+<span class="kw">use</span> <span class="ident">futures_core</span>::{<span class="ident">future::BoxFuture</span>, <span class="ident">Stream</span>};
+<span class="kw">use</span> <span class="ident">futures_util::stream::StreamExt</span> <span class="kw">as</span> <span class="kw">_</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">tokio::sync</span>::{
-    <span class="ident">mpsc</span>::{<span class="ident">UnboundedReceiver</span>, <span class="ident">UnboundedSender</span>},
-    <span class="ident">oneshot</span>,
-};
+<span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc::UnboundedReceiver</span>, <span class="ident">oneshot</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">accept::Accept</span>,
@@ -410,6 +405,9 @@
 
         <span class="doccomment">/// Return channel to notify caller that shutdown is complete.</span>
         <span class="ident">completion</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oneshot::Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
+
+        <span class="doccomment">/// Force System exit when true, overriding `ServerBuilder::system_exit()` if it is false.</span>
+        <span class="ident">force_system_stop</span>: <span class="ident">bool</span>,
     },
 }
 
@@ -421,8 +419,8 @@
 <span class="doccomment">/// Creates a worker per CPU core (or the number specified in [`ServerBuilder::workers`]) and</span>
 <span class="doccomment">/// distributes connections with a round-robin strategy.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The [Server] must be awaited to process stop commands and listen for OS signals. It will resolve</span>
-<span class="doccomment">/// when the server has fully shut down.</span>
+<span class="doccomment">/// The [Server] must be awaited or polled in order to start running. It will resolve when the</span>
+<span class="doccomment">/// server has fully shut down.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// # Shutdown Signals</span>
 <span class="doccomment">/// On UNIX systems, `SIGQUIT` will start a graceful shutdown and `SIGTERM` or `SIGINT` will start a</span>
@@ -480,8 +478,11 @@
 <span class="doccomment">///         .await</span>
 <span class="doccomment">/// }</span>
 <span class="doccomment">/// ```</span>
-<span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;futures do nothing unless you `.await` or poll them&quot;</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Server</span>(<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ServerInner</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>);
+<span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;Server does nothing unless you `.await` or poll it&quot;</span>]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Server</span> {
+    <span class="ident">handle</span>: <span class="ident">ServerHandle</span>,
+    <span class="ident">fut</span>: <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
+}
 
 <span class="kw">impl</span> <span class="ident">Server</span> {
     <span class="doccomment">/// Create server build.</span>
@@ -490,62 +491,26 @@
     }
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">builder</span>: <span class="ident">ServerBuilder</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Server</span>(<span class="ident">ServerInner::new</span>(<span class="ident">builder</span>).<span class="ident">map_err</span>(<span class="prelude-val">Some</span>))
+        <span class="ident">Server</span> {
+            <span class="ident">handle</span>: <span class="ident">ServerHandle::new</span>(<span class="ident">builder</span>.<span class="ident">cmd_tx</span>.<span class="ident">clone</span>()),
+            <span class="ident">fut</span>: <span class="ident">Box::pin</span>(<span class="ident">ServerInner::run</span>(<span class="ident">builder</span>)),
+        }
     }
 
-    <span class="doccomment">/// Get a handle for ServerFuture that can be used to change state of actix server.</span>
+    <span class="doccomment">/// Get a `Server` handle that can be used issue commands and change it&#39;s state.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// See [ServerHandle](ServerHandle) for usage.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ServerHandle</span> {
-        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">inner</span>) =&gt; <span class="ident">ServerHandle::new</span>(<span class="ident">inner</span>.<span class="ident">cmd_tx</span>.<span class="ident">clone</span>()),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                <span class="comment">// TODO: i don&#39;t think this is the best way to handle server startup fail</span>
-                <span class="macro">panic!</span>(
-                    <span class="string">&quot;server handle can not be obtained because server failed to start up: {}&quot;</span>,
-                    <span class="ident">err</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>()
-                );
-            }
-        }
+        <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">clone</span>()
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Future</span> <span class="kw">for</span> <span class="ident">Server</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">as_mut</span>().<span class="ident">get_mut</span>().<span class="number">0</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="ident">Poll::Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">err</span>
-                .<span class="ident">take</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;Server future cannot be polled after error&quot;</span>))),
-
-            <span class="prelude-val">Ok</span>(<span class="ident">inner</span>) =&gt; {
-                <span class="comment">// poll Signals</span>
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">signals</span>) <span class="op">=</span> <span class="ident">inner</span>.<span class="ident">signals</span> {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Poll::Ready</span>(<span class="ident">signal</span>) <span class="op">=</span> <span class="ident">Pin::new</span>(<span class="ident">signals</span>).<span class="ident">poll</span>(<span class="ident">cx</span>) {
-                        <span class="ident">inner</span>.<span class="ident">stop_task</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="ident">handle_signal</span>(<span class="ident">signal</span>);
-                        <span class="comment">// drop signals listener</span>
-                        <span class="ident">inner</span>.<span class="ident">signals</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-                    }
-                }
-
-                <span class="comment">// handle stop tasks and eager drain command channel</span>
-                <span class="kw">loop</span> {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">fut</span>) <span class="op">=</span> <span class="ident">inner</span>.<span class="ident">stop_task</span> {
-                        <span class="comment">// only resolve stop task and exit</span>
-                        <span class="kw">return</span> <span class="ident">fut</span>.<span class="ident">as_mut</span>().<span class="ident">poll</span>(<span class="ident">cx</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="prelude-val">Ok</span>(()));
-                    }
-
-                    <span class="kw">match</span> <span class="ident">Pin::new</span>(<span class="kw-2">&amp;mut</span> <span class="ident">inner</span>.<span class="ident">cmd_rx</span>).<span class="ident">poll_recv</span>(<span class="ident">cx</span>) {
-                        <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="ident">cmd</span>)) =&gt; {
-                            <span class="comment">// if stop task is required, set it and loop</span>
-                            <span class="ident">inner</span>.<span class="ident">stop_task</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="ident">handle_cmd</span>(<span class="ident">cmd</span>);
-                        }
-                        <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="ident">Poll::Pending</span>,
-                    }
-                }
-            }
-        }
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
+    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
+        <span class="ident">Pin::new</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Pin::into_inner</span>(<span class="self">self</span>).<span class="ident">fut</span>).<span class="ident">poll</span>(<span class="ident">cx</span>)
     }
 }
 
@@ -553,16 +518,27 @@
     <span class="ident">worker_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">WorkerHandleServer</span><span class="op">&gt;</span>,
     <span class="ident">worker_config</span>: <span class="ident">ServerWorkerConfig</span>,
     <span class="ident">services</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">InternalServiceFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">exit</span>: <span class="ident">bool</span>,
-    <span class="ident">cmd_tx</span>: <span class="ident">UnboundedSender</span><span class="op">&lt;</span><span class="ident">ServerCommand</span><span class="op">&gt;</span>,
-    <span class="ident">cmd_rx</span>: <span class="ident">UnboundedReceiver</span><span class="op">&lt;</span><span class="ident">ServerCommand</span><span class="op">&gt;</span>,
-    <span class="ident">signals</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Signals</span><span class="op">&gt;</span>,
     <span class="ident">waker_queue</span>: <span class="ident">WakerQueue</span>,
-    <span class="ident">stop_task</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">system_stop</span>: <span class="ident">bool</span>,
+    <span class="ident">stopping</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">ServerInner</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="kw-2">mut</span> <span class="ident">builder</span>: <span class="ident">ServerBuilder</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="ident">builder</span>: <span class="ident">ServerBuilder</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">this</span>, <span class="kw-2">mut</span> <span class="ident">mux</span>) <span class="op">=</span> <span class="ident"><span class="self">Self</span>::run_sync</span>(<span class="ident">builder</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cmd</span>) <span class="op">=</span> <span class="ident">mux</span>.<span class="ident">next</span>().<span class="kw">await</span> {
+            <span class="ident">this</span>.<span class="ident">handle_cmd</span>(<span class="ident">cmd</span>).<span class="kw">await</span>;
+
+            <span class="kw">if</span> <span class="ident">this</span>.<span class="ident">stopping</span> {
+                <span class="kw">break</span>;
+            }
+        }
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn</span> <span class="ident">run_sync</span>(<span class="kw-2">mut</span> <span class="ident">builder</span>: <span class="ident">ServerBuilder</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>(<span class="self">Self</span>, <span class="ident">ServerEventMultiplexer</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">sockets</span> <span class="op">=</span> <span class="ident">mem::take</span>(<span class="kw-2">&amp;mut</span> <span class="ident">builder</span>.<span class="ident">sockets</span>)
             .<span class="ident">into_iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">t</span><span class="op">|</span> (<span class="ident">t</span>.<span class="number">0</span>, <span class="ident">t</span>.<span class="number">2</span>))
@@ -589,67 +565,65 @@
 
         <span class="kw">let</span> (<span class="ident">waker_queue</span>, <span class="ident">worker_handles</span>) <span class="op">=</span> <span class="ident">Accept::start</span>(<span class="ident">sockets</span>, <span class="kw-2">&amp;</span><span class="ident">builder</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// construct OS signals listener future</span>
-        <span class="kw">let</span> <span class="ident">signals</span> <span class="op">=</span> (<span class="ident">builder</span>.<span class="ident">listen_os_signals</span>).<span class="ident">then</span>(<span class="ident">Signals::new</span>);
-
-        <span class="prelude-val">Ok</span>(<span class="ident">ServerInner</span> {
-            <span class="ident">cmd_tx</span>: <span class="ident">builder</span>.<span class="ident">cmd_tx</span>.<span class="ident">clone</span>(),
+        <span class="kw">let</span> <span class="ident">mux</span> <span class="op">=</span> <span class="ident">ServerEventMultiplexer</span> {
+            <span class="ident">signal_fut</span>: (<span class="ident">builder</span>.<span class="ident">listen_os_signals</span>).<span class="ident">then</span>(<span class="ident">Signals::new</span>),
             <span class="ident">cmd_rx</span>: <span class="ident">builder</span>.<span class="ident">cmd_rx</span>,
-            <span class="ident">signals</span>,
+        };
+
+        <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">ServerInner</span> {
             <span class="ident">waker_queue</span>,
             <span class="ident">worker_handles</span>,
             <span class="ident">worker_config</span>: <span class="ident">builder</span>.<span class="ident">worker_config</span>,
             <span class="ident">services</span>: <span class="ident">builder</span>.<span class="ident">factories</span>,
-            <span class="ident">exit</span>: <span class="ident">builder</span>.<span class="ident">exit</span>,
-            <span class="ident">stop_task</span>: <span class="prelude-val">None</span>,
-        })
+            <span class="ident">system_stop</span>: <span class="ident">builder</span>.<span class="ident">exit</span>,
+            <span class="ident">stopping</span>: <span class="bool-val">false</span>,
+        };
+
+        <span class="prelude-val">Ok</span>((<span class="ident">server</span>, <span class="ident">mux</span>))
     }
 
-    <span class="kw">fn</span> <span class="ident">handle_cmd</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">item</span>: <span class="ident">ServerCommand</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_cmd</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">item</span>: <span class="ident">ServerCommand</span>) {
         <span class="kw">match</span> <span class="ident">item</span> {
             <span class="ident">ServerCommand::Pause</span>(<span class="ident">tx</span>) =&gt; {
                 <span class="self">self</span>.<span class="ident">waker_queue</span>.<span class="ident">wake</span>(<span class="ident">WakerInterest::Pause</span>);
                 <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(());
-                <span class="prelude-val">None</span>
             }
 
             <span class="ident">ServerCommand::Resume</span>(<span class="ident">tx</span>) =&gt; {
                 <span class="self">self</span>.<span class="ident">waker_queue</span>.<span class="ident">wake</span>(<span class="ident">WakerInterest::Resume</span>);
                 <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(());
-                <span class="prelude-val">None</span>
             }
 
             <span class="ident">ServerCommand::Stop</span> {
                 <span class="ident">graceful</span>,
                 <span class="ident">completion</span>,
+                <span class="ident">force_system_stop</span>,
             } =&gt; {
-                <span class="kw">let</span> <span class="ident">exit</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">exit</span>;
+                <span class="self">self</span>.<span class="ident">stopping</span> <span class="op">=</span> <span class="bool-val">true</span>;
 
                 <span class="comment">// stop accept thread</span>
                 <span class="self">self</span>.<span class="ident">waker_queue</span>.<span class="ident">wake</span>(<span class="ident">WakerInterest::Stop</span>);
 
-                <span class="comment">// stop workers</span>
+                <span class="comment">// send stop signal to workers</span>
                 <span class="kw">let</span> <span class="ident">workers_stop</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">worker_handles</span>
                     .<span class="ident">iter</span>()
                     .<span class="ident">map</span>(<span class="op">|</span><span class="ident">worker</span><span class="op">|</span> <span class="ident">worker</span>.<span class="ident">stop</span>(<span class="ident">graceful</span>))
                     .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
-                <span class="prelude-val">Some</span>(<span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">if</span> <span class="ident">graceful</span> {
-                        <span class="comment">// wait for all workers to shut down</span>
-                        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">join_all</span>(<span class="ident">workers_stop</span>).<span class="kw">await</span>;
-                    }
+                <span class="kw">if</span> <span class="ident">graceful</span> {
+                    <span class="comment">// wait for all workers to shut down</span>
+                    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">join_all</span>(<span class="ident">workers_stop</span>).<span class="kw">await</span>;
+                }
 
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tx</span>) <span class="op">=</span> <span class="ident">completion</span> {
-                        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(());
-                    }
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tx</span>) <span class="op">=</span> <span class="ident">completion</span> {
+                    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(());
+                }
 
-                    <span class="kw">if</span> <span class="ident">exit</span> {
-                        <span class="ident">sleep</span>(<span class="ident">Duration::from_millis</span>(<span class="number">300</span>)).<span class="kw">await</span>;
-                        <span class="ident">System::try_current</span>().<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="ident">System::stop</span>);
-                    }
-                }))
+                <span class="kw">if</span> <span class="self">self</span>.<span class="ident">system_stop</span> <span class="op">|</span><span class="op">|</span> <span class="ident">force_system_stop</span> {
+                    <span class="ident">sleep</span>(<span class="ident">Duration::from_millis</span>(<span class="number">300</span>)).<span class="kw">await</span>;
+                    <span class="ident">System::try_current</span>().<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="ident">System::stop</span>);
+                }
             }
 
             <span class="ident">ServerCommand::WorkerFaulted</span>(<span class="ident">idx</span>) =&gt; {
@@ -682,41 +656,61 @@
 
                     <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">error!</span>(<span class="string">&quot;can not restart worker {}: {}&quot;</span>, <span class="ident">idx</span>, <span class="ident">err</span>),
                 };
-
-                <span class="prelude-val">None</span>
             }
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">handle_signal</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">signal</span>: <span class="ident">SignalKind</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">map_signal</span>(<span class="ident">signal</span>: <span class="ident">SignalKind</span>) -&gt; <span class="ident">ServerCommand</span> {
         <span class="kw">match</span> <span class="ident">signal</span> {
             <span class="ident">SignalKind::Int</span> =&gt; {
                 <span class="macro">info!</span>(<span class="string">&quot;SIGINT received; starting forced shutdown&quot;</span>);
-                <span class="self">self</span>.<span class="ident">exit</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                <span class="self">self</span>.<span class="ident">handle_cmd</span>(<span class="ident">ServerCommand::Stop</span> {
+                <span class="ident">ServerCommand::Stop</span> {
                     <span class="ident">graceful</span>: <span class="bool-val">false</span>,
                     <span class="ident">completion</span>: <span class="prelude-val">None</span>,
-                })
+                    <span class="ident">force_system_stop</span>: <span class="bool-val">true</span>,
+                }
             }
 
             <span class="ident">SignalKind::Term</span> =&gt; {
                 <span class="macro">info!</span>(<span class="string">&quot;SIGTERM received; starting graceful shutdown&quot;</span>);
-                <span class="self">self</span>.<span class="ident">exit</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                <span class="self">self</span>.<span class="ident">handle_cmd</span>(<span class="ident">ServerCommand::Stop</span> {
+                <span class="ident">ServerCommand::Stop</span> {
                     <span class="ident">graceful</span>: <span class="bool-val">true</span>,
                     <span class="ident">completion</span>: <span class="prelude-val">None</span>,
-                })
+                    <span class="ident">force_system_stop</span>: <span class="bool-val">true</span>,
+                }
             }
 
             <span class="ident">SignalKind::Quit</span> =&gt; {
                 <span class="macro">info!</span>(<span class="string">&quot;SIGQUIT received; starting forced shutdown&quot;</span>);
-                <span class="self">self</span>.<span class="ident">exit</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                <span class="self">self</span>.<span class="ident">handle_cmd</span>(<span class="ident">ServerCommand::Stop</span> {
+                <span class="ident">ServerCommand::Stop</span> {
                     <span class="ident">graceful</span>: <span class="bool-val">false</span>,
                     <span class="ident">completion</span>: <span class="prelude-val">None</span>,
-                })
+                    <span class="ident">force_system_stop</span>: <span class="bool-val">true</span>,
+                }
             }
         }
+    }
+}
+
+<span class="kw">struct</span> <span class="ident">ServerEventMultiplexer</span> {
+    <span class="ident">cmd_rx</span>: <span class="ident">UnboundedReceiver</span><span class="op">&lt;</span><span class="ident">ServerCommand</span><span class="op">&gt;</span>,
+    <span class="ident">signal_fut</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Signals</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Stream</span> <span class="kw">for</span> <span class="ident">ServerEventMultiplexer</span> {
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">ServerCommand</span>;
+
+    <span class="kw">fn</span> <span class="ident">poll_next</span>(<span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">this</span> <span class="op">=</span> <span class="ident">Pin::into_inner</span>(<span class="self">self</span>);
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">signal_fut</span>) <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">this</span>.<span class="ident">signal_fut</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Poll::Ready</span>(<span class="ident">signal</span>) <span class="op">=</span> <span class="ident">Pin::new</span>(<span class="ident">signal_fut</span>).<span class="ident">poll</span>(<span class="ident">cx</span>) {
+                <span class="ident">this</span>.<span class="ident">signal_fut</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+                <span class="kw">return</span> <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="ident">ServerInner::map_signal</span>(<span class="ident">signal</span>)));
+            }
+        }
+
+        <span class="ident">Pin::new</span>(<span class="kw-2">&amp;mut</span> <span class="ident">this</span>.<span class="ident">cmd_rx</span>).<span class="ident">poll_recv</span>(<span class="ident">cx</span>)
     }
 }
 </code></pre></div>

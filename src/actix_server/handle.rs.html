@@ -54,6 +54,7 @@
 <span id="53">53</span>
 <span id="54">54</span>
 <span id="55">55</span>
+<span id="56">56</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::future::Future</span>;
 
 <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc::UnboundedSender</span>, <span class="ident">oneshot</span>};
@@ -102,6 +103,7 @@
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cmd_tx</span>.<span class="ident">send</span>(<span class="ident">ServerCommand::Stop</span> {
             <span class="ident">graceful</span>,
             <span class="ident">completion</span>: <span class="prelude-val">Some</span>(<span class="ident">tx</span>),
+            <span class="ident">force_system_stop</span>: <span class="bool-val">false</span>,
         });
 
         <span class="kw">async</span> {
