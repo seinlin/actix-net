@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Server","General purpose TCP server that runs services receiving Tokio `TcpStream`s."]],"struct":[["ServerBuilder","[Server] builder."],["ServerHandle","Server handle."],["TestServer","A testing server."]],"trait":[["ServiceFactory",""]]});
+initSidebarItems({"struct":[["Server","General purpose TCP server that runs services receiving Tokio `TcpStream`s."],["ServerBuilder","[Server] builder."],["ServerHandle","Server handle."],["TestServer","A testing server."]],"trait":[["ServiceFactory",""]]});
