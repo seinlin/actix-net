@@ -273,22 +273,20 @@
 <span id="271">271</span>
 <span id="272">272</span>
 <span id="273">273</span>
-<span id="274">274</span>
 </pre><pre class="rust"><code><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident">std::net</span>::{
     <span class="ident">SocketAddr</span> <span class="kw">as</span> <span class="ident">StdSocketAddr</span>, <span class="ident">TcpListener</span> <span class="kw">as</span> <span class="ident">StdTcpListener</span>, <span class="ident">ToSocketAddrs</span>,
 };
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fmt</span>, <span class="ident">io</span>};
 
+<span class="kw">use</span> <span class="ident">actix_rt::net::TcpStream</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident">mio::net::TcpListener</span> <span class="kw">as</span> <span class="ident">MioTcpListener</span>;
+<span class="kw">use</span> <span class="ident">mio</span>::{<span class="ident">event::Source</span>, <span class="ident">Interest</span>, <span class="ident">Registry</span>, <span class="ident">Token</span>};
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">unix</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> {
     <span class="ident">mio::net::UnixListener</span> <span class="kw">as</span> <span class="ident">MioUnixListener</span>,
     <span class="ident">std::os::unix::net::UnixListener</span> <span class="kw">as</span> <span class="ident">StdUnixListener</span>,
 };
-
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fmt</span>, <span class="ident">io</span>};
-
-<span class="kw">use</span> <span class="ident">actix_rt::net::TcpStream</span>;
-<span class="kw">use</span> <span class="ident">mio</span>::{<span class="ident">event::Source</span>, <span class="ident">Interest</span>, <span class="ident">Registry</span>, <span class="ident">Token</span>};
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">MioListener</span> {
     <span class="ident">Tcp</span>(<span class="ident">MioTcpListener</span>),

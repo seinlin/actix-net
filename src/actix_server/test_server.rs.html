@@ -169,7 +169,7 @@
 
 <span class="kw">use</span> <span class="ident">actix_rt</span>::{<span class="ident">net::TcpStream</span>, <span class="ident">System</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Server</span>, <span class="ident">ServerBuilder</span>, <span class="ident">ServerHandle</span>, <span class="ident">ServiceFactory</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Server</span>, <span class="ident">ServerBuilder</span>, <span class="ident">ServerHandle</span>, <span class="ident">ServerServiceFactory</span>};
 
 <span class="doccomment">/// A testing server.</span>
 <span class="doccomment">///</span>
@@ -233,7 +233,7 @@
     }
 
     <span class="doccomment">/// Start new test server with application factory.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">ServiceFactory</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">factory</span>: <span class="ident">F</span>) -&gt; <span class="ident">TestServerRuntime</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">ServerServiceFactory</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">factory</span>: <span class="ident">F</span>) -&gt; <span class="ident">TestServerRuntime</span> {
         <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>();
 
         <span class="comment">// run server in separate thread</span>
