@@ -1,3 +1,4 @@
+use log::{info, debug};
 use std::{fmt, io, net};
 
 use actix_codec::{AsyncRead, AsyncWrite};
@@ -85,9 +86,12 @@ pub(crate) enum SocketListener {
 impl SocketListener {
     pub(crate) fn accept(&self) -> io::Result<Option<(StdStream, SocketAddr)>> {
         match *self {
-            SocketListener::Tcp(ref lst) => lst
+            SocketListener::Tcp(ref lst) => {
+                debug!("DEBUG ACTIX server accept tcp: {:?}", lst);
+                lst
                 .accept_std()
-                .map(|(stream, addr)| Some((StdStream::Tcp(stream), SocketAddr::Tcp(addr)))),
+                .map(|(stream, addr)| Some((StdStream::Tcp(stream), SocketAddr::Tcp(addr))))
+            },
             #[cfg(all(unix))]
             SocketListener::Uds(ref lst) => lst.accept_std().map(|res| {
                 res.map(|(stream, addr)| (StdStream::Uds(stream), SocketAddr::Uds(addr)))
@@ -149,6 +153,7 @@ pub trait FromStream: AsyncRead + AsyncWrite + Sized {
 
 impl FromStream for TcpStream {
     fn from_stdstream(sock: StdStream) -> io::Result<Self> {
+        info!("DEBUG ACTIX std stream {:?}", sock);
         match sock {
             StdStream::Tcp(stream) => TcpStream::from_std(stream),
             #[cfg(all(unix))]

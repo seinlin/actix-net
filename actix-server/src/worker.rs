@@ -47,7 +47,10 @@ pub fn max_concurrent_connections(num: usize) {
 }
 
 pub(crate) fn num_connections() -> usize {
-    MAX_CONNS_COUNTER.with(|conns| conns.total())
+    MAX_CONNS_COUNTER.with(|conns| {
+        info!("DEBUG ACTIX num_connections [{}]", conns.total());
+        conns.total()
+    })
 }
 
 thread_local! {

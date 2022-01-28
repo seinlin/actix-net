@@ -144,9 +144,9 @@ impl Accept {
         let _ = thread::Builder::new()
             .name("actix-server accept loop".to_owned())
             .spawn(move || {
+                info!("DEBUG ACTIX server accept {:?}.", srv);
                 System::set_current(sys);
                 let mut accept = Accept::new(rx, socks, workers, srv);
-
                 // Start listening for incoming commands
                 if let Err(err) = accept.poll.register(
                     &cmd_reg,
@@ -241,6 +241,7 @@ impl Accept {
 
             for event in events.iter() {
                 let token = event.token();
+                info!("DEBUG ACTIX accept poll [{:?}]", token);
                 match token {
                     CMD => {
                         if !self.process_cmd() {
@@ -272,11 +273,12 @@ impl Accept {
                         mio::Ready::readable(),
                         mio::PollOpt::edge(),
                     ) {
-                        error!("Can not register server socket {}", err);
+                        error!("DEBUG ACTIX Can not register server socket {}", err);
                     } else {
-                        info!("Resume accepting connections on {}", info.addr);
+                        info!("DEBUG ACTIX Resume accepting connections on {}", info.addr);
                     }
                 } else {
+                    info!("DEBUG ACTIX server process timer set to {:?}.", inst);
                     info.timeout = Some(inst);
                 }
             }
@@ -285,9 +287,11 @@ impl Accept {
 
     fn process_cmd(&mut self) -> bool {
         loop {
-            match self.rx.try_recv() {
+            let recv_cmd = self.rx.try_recv();
+            match recv_cmd {
                 Ok(cmd) => match cmd {
                     Command::Pause => {
+                        info!("DEBUG ACTIX process_cmd Pause cmd.");
                         for (_, info) in self.sockets.iter_mut() {
                             if let Err(err) = self.poll.deregister(&info.sock) {
                                 error!("Can not deregister server socket {}", err);
@@ -297,6 +301,7 @@ impl Accept {
                         }
                     }
                     Command::Resume => {
+                        info!("DEBUG ACTIX process_cmd Resume cmd.");
                         for (token, info) in self.sockets.iter() {
                             if let Err(err) = self.register(token, info) {
                                 error!("Can not resume socket accept process: {}", err);
@@ -309,23 +314,28 @@ impl Accept {
                         }
                     }
                     Command::Stop => {
+                        info!("DEBUG ACTIX process_cmd Stop cmd.");
                         for (_, info) in self.sockets.iter() {
                             let _ = self.poll.deregister(&info.sock);
                         }
                         return false;
                     }
                     Command::Worker(worker) => {
+                        info!("DEBUG ACTIX process_cmd Worker cmd.");
                         self.backpressure(false);
                         self.workers.push(worker);
                     }
                 },
-                Err(err) => match err {
+                Err(err) => {
+                    info!("DEBUG ACTIX process_cmd err {:?}.", err);
+                    match err {
                     sync_mpsc::TryRecvError::Empty => break,
                     sync_mpsc::TryRecvError::Disconnected => {
                         for (_, info) in self.sockets.iter() {
                             let _ = self.poll.deregister(&info.sock);
                         }
                         return false;
+                    }
                     }
                 },
             }
@@ -449,7 +459,10 @@ impl Accept {
                         peer: Some(addr),
                     },
                     Ok(None) => return,
-                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => return,
+                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                        info!("DEBUG ACTIX server accept error WouldBlock - return.");
+                        return;
+                    },
                     Err(ref e) if connection_error(e) => continue,
                     Err(e) => {
                         error!("Error accepting connection: {}", e);
@@ -469,6 +482,7 @@ impl Accept {
                     }
                 }
             } else {
+                info!("DEBUG ACTIX server accept socket None - return.");
                 return;
             };
 
